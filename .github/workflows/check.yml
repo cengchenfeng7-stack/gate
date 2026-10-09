@@ -18,6 +18,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,17 +31,25 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      # 如果你需要用 hosts 覆盖自定义域，请把 Fix DNS 放在任何 curl/请求之前
       - name: Fix DNS resolution
         run: |
-          echo "104.16.132.229 check-sstp.chengchenfeng7.workers.dev" | sudo tee -a /etc/hosts
-          # 如果 runner 需要将自定义域映射到特定 IP，也加入下面一行：
-          # echo "104.16.132.229 check.mufengzhijia.ccwu.cc" | sudo tee -a /etc/hosts || true
+          set -euxo pipefail
 
-      - name: Test Worker connection
+          # 关键：把你真正使用的 Worker 域名也绑定到正确 IP
+          echo "104.16.132.229 check-sstp.chengchenfeng7.workers.dev" | sudo tee -a /etc/hosts
+          echo "104.16.132.229 check.mufengzhijia.ccwu.cc" | sudo tee -a /etc/hosts
+
+          echo "==== /etc/hosts ===="
+          cat /etc/hosts | tail -n 20
+
+      - name: Test Worker connectivity
         run: |
-          echo "测试自定义域名连通性..."
-          curl -I -m 10 "https://check.mufengzhijia.ccwu.cc/" || true
+          set -euxo pipefail
+          echo "测试 Worker 域名连通性..."
+          curl -I -L --connect-timeout 10 --max-time 20 https://check.mufengzhijia.ccwu.cc/ || true
+          echo
+          echo "测试 workers.dev 域名连通性..."
+          curl -I -L --connect-timeout 10 --max-time 20 https://check-sstp.chengchenfeng7.workers.dev/ || true
 
       - name: Get VPN Gate nodes + check via Cloudflare Worker + build page
         run: python vpngate.py
@@ -48,15 +57,18 @@ jobs:
           CHECK_CONCURRENCY: "32"
           CHECK_TIMEOUT: "90"
           WORKER_CHECK_URL: "https://check.mufengzhijia.ccwu.cc/"
-          # 把脚本产物写到 ./web（与后续 Upload Pages artifact 保持一致）
           PUBLIC_DIR: "./web"
 
       - name: Ensure GitHub Pages is enabled (one-time auto setup)
         run: |
-          code=$(curl -s -o /dev/null -w '%{http_code}' \
+          set -euo pipefail
+
+          code=$(curl -sS -o /dev/null -w '%{http_code}' \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/pages")
+
           echo "Pages API status: $code"
+
           if [ "$code" = "404" ]; then
             echo "首次运行: 启用 GitHub Pages (source = GitHub Actions, 目录 /web)"
             curl -sS -X PUT \
@@ -83,4 +95,4 @@ jobs:
         uses: actions/deploy-pages@v4
 
       - name: Show site URL
-        run: 'echo "site: https://${{ github.repository_owner }}.github.io/gate/ ..."'
+        run: echo "site: https://${{ github.repository_owner }}.github.io/gate/"
