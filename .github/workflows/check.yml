@@ -95,4 +95,4 @@ jobs:
         uses: actions/deploy-pages@v4
 
       - name: Show site URL
-        run: echo "site: https://${{ github.repository_owner }}.github.io/gate/"
+        run: 'echo "site: https://${{ github.repository_owner }}.github.io/gate/"'
