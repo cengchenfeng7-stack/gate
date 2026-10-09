@@ -226,7 +226,7 @@ def classify_network(host, exit_org, is_datacenter=None):
     if h.startswith("public-vpn"): return "datacenter"
     if re.match(r"^vpn\d{5,}", h) or re.match(r"^vpnv\d+", h): return "residential"
     return "unknown"
-
+WORKER_CHECK_URL = "https://check-sstp.chengchenfeng7.workers.dev/check?sstp="
 def check_one(node, session):
     url = WORKER_CHECK_URL + "vpn:vpn@" + f"{node['host']}:{node['port']}"
     
