@@ -49,12 +49,16 @@ HTTP_TIMEOUT = int(os.environ.get("HTTP_TIMEOUT", "60"))
 PUBLIC_DIR = os.environ.get("PUBLIC_DIR", os.path.join(REPO_DIR, "public"))
 TEMPLATE_HTML = os.path.join(REPO_DIR, "web", "index.html")
 
-# 关键修复：强制读取并校验 Worker URL，避免 NameError
+# 关键修复：强制读取、校验 Worker URL
 WORKER_CHECK_URL = os.environ.get("WORKER_CHECK_URL", "").strip()
 if not WORKER_CHECK_URL:
     raise SystemExit(
         "FATAL: WORKER_CHECK_URL 环境变量未设置。请在 workflow env 中设置，例如: "
         "https://check.mufengzhijia.ccwu.cc/"
+    )
+if not WORKER_CHECK_URL.startswith(("http://", "https://")):
+    raise SystemExit(
+        f"FATAL: WORKER_CHECK_URL 格式错误 (必须以 http:// 或 https:// 开头): {WORKER_CHECK_URL}"
     )
 WORKER_CHECK_URL = WORKER_CHECK_URL.rstrip("/") + "/"
 
@@ -72,7 +76,7 @@ RESIDENTIAL_ORG_KEYWORDS = [
 ]
 
 COUNTRY_ZH = {
-    "JP": "日本", "KR": "韩国", "US": "美国", "CA": "加拿大", "RU": "俄罗斯",
+    "JP": "日本", "KR": "韩国", "US": "美国", "CA": "加拿大", "RU": "俄罗��",
     "RO": "罗马尼亚", "TH": "泰国", "VN": "越南", "DE": "德国", "FR": "法国",
     "GB": "英国", "UK": "英国", "SG": "新加坡", "TW": "台湾", "HK": "香港",
     "CN": "中国", "AU": "澳大利亚", "NL": "荷兰", "SE": "瑞典", "CH": "瑞士",
