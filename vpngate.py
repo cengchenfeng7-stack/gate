@@ -273,6 +273,15 @@ def check_one(node, session):
         out["worker_error"] = True
         print(f"❌ 致命错误 -> 网址: {url} | 错误: {out['error']}")
         return out
+     
+  
+def check_all(nodes, session):
+    results = []
+    with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
+        futures = [pool.submit(check_one, n, session) for n in nodes]
+        for fut in as_completed(futures):
+            results.append(fut.result())
+    return results
 
 # ---------------------------------------------------------------------------
 # 生成数据
