@@ -27,6 +27,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install dependencies
+        run: pip install requests
+
       - name: Set up public DNS
         run: |
           sudo rm -f /etc/resolv.conf
@@ -37,9 +40,8 @@ jobs:
       - name: Get VPN Gate nodes + check via Cloudflare Worker + build page
         run: python vpngate.py
         env:
-          # 已部署的检测 Worker (不要改动: 检测统一走这里)
           CHECK_CONCURRENCY: "32"
-          CHECK_TIMEOUT: "90"
+          CHECK_TIMEOUT: "90""
 
       - name: Ensure GitHub Pages is enabled (one-time auto setup)
         run: |
