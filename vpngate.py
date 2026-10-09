@@ -260,6 +260,7 @@ def check_one(node, session):
     except Exception as exc:
         out["error"] = f"{type(exc).__name__}: {exc}"
         out["worker_error"] = True
+        print(f"❌ 致命错误 -> 网址: {url} | 错误: {out['error']}")  # <--- 就是加这一行
         return out
 
 def check_all(nodes, session):
