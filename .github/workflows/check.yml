@@ -53,7 +53,7 @@ jobs:
         env:
           CHECK_CONCURRENCY: "32"
           CHECK_TIMEOUT: "90"
-          WORKER_CHECK_URL: "https://check.mufengzhijia.ccwu.cc/"
+          WORKER_CHECK_URL: "https://vless.mufengzhijia.ccwu.cc/"
           PUBLIC_DIR: "./web"
 
       - name: Ensure GitHub Pages is enabled
