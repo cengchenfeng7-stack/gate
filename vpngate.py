@@ -23,6 +23,8 @@ from datetime import datetime, timezone
 from urllib.parse import quote
 
 import requests
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 for _stream in (sys.stdout, sys.stderr):
     try:
