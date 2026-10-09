@@ -28,14 +28,14 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
+      - name: Test Worker connection
+        run: |
+          echo "测试 Workers 域名连通性..."
+          curl -I -m 10 "https://check-sstp.chengchenfeng7.workers.dev/" || true
+          echo "测试自定义域名连通性..."
+          curl -I -m 10 "https://check.mufengzhijia.ccwu.cc/" || true
         run: pip install requests
 
-      - name: Set up public DNS
-        run: |
-          sudo rm -f /etc/resolv.conf
-          echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
-          echo "nameserver 8.8.4.4" | sudo tee -a /etc/resolv.conf
-          echo "options timeout:1 attempts:2" | sudo tee -a /etc/resolv.conf
 
       - name: Get VPN Gate nodes + check via Cloudflare Worker + build page
         run: python vpngate.py
