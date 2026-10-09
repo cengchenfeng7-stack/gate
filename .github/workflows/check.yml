@@ -35,6 +35,10 @@ jobs:
           echo "测试自定义域名连通性..."
           curl -I -m 10 "https://check.mufengzhijia.ccwu.cc/" || true
 
+      - name: Fix DNS resolution
+        run: |
+          echo "104.16.132.229 check-sstp.chengchenfeng7.workers.dev" | sudo tee -a /etc/hosts
+
       - name: Get VPN Gate nodes + check via Cloudflare Worker + build page
         run: python vpngate.py
         env:
