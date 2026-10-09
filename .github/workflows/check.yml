@@ -40,11 +40,11 @@ jobs:
           echo "104.16.132.229 check-sstp.chengchenfeng7.workers.dev" | sudo tee -a /etc/hosts
 
       - name: Get VPN Gate nodes + check via Cloudflare Worker + build page
-        run: python vpngate.py
-        env:
-          CHECK_CONCURRENCY: "32"
-          CHECK_TIMEOUT: "90"
-          WORKER_CHECK_URL: "https://check-sstp.chengchenfeng7.workers.dev/"
+       run: python vpngate.py
+       env:
+       CHECK_CONCURRENCY: "32"
+       CHECK_TIMEOUT: "90"
+       WORKER_CHECK_URL: "https://check.mufengzhijia.ccwu.cc/"
 
       - name: Ensure GitHub Pages is enabled (one-time auto setup)
         run: |
