@@ -228,15 +228,8 @@ def classify_network(host, exit_org, is_datacenter=None):
     return "unknown"
 
 def check_one(node, session):
-    # 使用 Cloudflare 的公用任播 IP，绕过 DNS 解析
-    cloudflare_ip = "104.16.132.229"
-    host_header = "check-sstp.chengchenfeng7.workers.dev"  # 你的 Worker 域名
-    url = f"https://{cloudflare_ip}/check?sstp=vpn:vpn@{node['host']}:{node['port']}"
-    headers = {
-        "Host": host_header,
-        "User-Agent": "Mozilla/5.0 (gate-checker)"
-    }
-
+    url = WORKER_CHECK_URL + "vpn:vpn@" + f"{node['host']}:{node['port']}"
+    
     out = dict(node)
     out["protocol"] = "sstp"
     out["link"] = f"sstp://vpn:vpn@{node['host']}:{node['port']}"
@@ -246,8 +239,8 @@ def check_one(node, session):
     out["residential"] = "unknown"
 
     try:
-        # 使用我们构建好的 IP 和 Headers 发起请求，关闭证书验证
-        r = session.get(url, timeout=CHECK_TIMEOUT, headers=headers, verify=False)
+        # 移除了 IP 和 Headers，直接使用域名请求（由 system 层的 /etc/hosts 解决 DNS）
+        r = session.get(url, timeout=CHECK_TIMEOUT, headers={"User-Agent": "Mozilla/5.0 (gate-checker)"}, verify=False)
         if r.status_code != 200:
             out["error"] = f"HTTP {r.status_code}"
             out["worker_error"] = True
@@ -273,7 +266,6 @@ def check_one(node, session):
         out["worker_error"] = True
         print(f"❌ 致命错误 -> 网址: {url} | 错误: {out['error']}")
         return out
-     
   
 def check_all(nodes, session):
     results = []
