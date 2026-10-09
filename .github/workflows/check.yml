@@ -34,19 +34,19 @@ jobs:
       - name: Fix DNS resolution
         run: |
           set -euxo pipefail
-          echo "104.16.132.229 check-sstp.chengchenfeng7.workers.dev" | sudo tee -a /etc/hosts
-          echo "104.16.132.229 check.mufengzhijia.ccwu.cc" | sudo tee -a /etc/hosts
+          echo "104.16.132.229 edgetunnel.cengchenfeng7.workers.dev" | sudo tee -a /etc/hosts
+          echo "104.16.132.229 vless.mufengzhijia.ccwu.cc" | sudo tee -a /etc/hosts
           echo "==== /etc/hosts ===="
           cat /etc/hosts | tail -n 20
 
       - name: Test Worker connectivity
         run: |
           set -euxo pipefail
-          echo "测试 check.mufengzhijia.ccwu.cc 连通性..."
-          curl -I -L --connect-timeout 10 --max-time 20 https://check.mufengzhijia.ccwu.cc/ || true
+          echo "测试 vless.mufengzhijia.ccwu.cc 连通性..."
+          curl -I -L --connect-timeout 10 --max-time 20 https://vless.mufengzhijia.ccwu.cc/ || true
           echo
-          echo "测试 check-sstp.chengchenfeng7.workers.dev 连通性..."
-          curl -I -L --connect-timeout 10 --max-time 20 https://check-sstp.chengchenfeng7.workers.dev/ || true
+          echo "测试 edgetunnel.cengchenfeng7.workers.dev 连通性..."
+          curl -I -L --connect-timeout 10 --max-time 20 https://edgetunnel.chengchenfeng7.workers.dev/ || true
 
       - name: Get VPN Gate nodes + check via Cloudflare Worker + build page
         run: python vpngate.py
