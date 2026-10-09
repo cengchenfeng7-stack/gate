@@ -32,8 +32,6 @@ jobs:
 
       - name: Test Worker connection
         run: |
-          echo "测试 Workers 域名连通性..."
-          curl -I -m 10 "https://check-sstp.cengchenfeng7.workers.dev/" || true
           echo "测试自定义域名连通性..."
           curl -I -m 10 "https://check.mufengzhijia.ccwu.cc/" || true
 
