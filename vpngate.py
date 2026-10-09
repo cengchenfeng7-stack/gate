@@ -228,7 +228,7 @@ def classify_network(host, exit_org, is_datacenter=None):
     return "unknown"
 WORKER_CHECK_URL = "https://check-sstp.chengchenfeng7.workers.dev/check?sstp="
 def check_one(node, session):
-    url = WORKER_CHECK_URL + "vpn:vpn@" + f"{node['host']}:{node['port']}"
+      url = "https://check-sstp.cengchenfeng7.workers.dev/check?sstp=vpn:vpn@" + f"{node['host']}:{node['port']}"
     
     out = dict(node)
     out["protocol"] = "sstp"
