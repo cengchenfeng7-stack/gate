@@ -229,7 +229,14 @@ def classify_network(host, exit_org, is_datacenter=None):
     return "unknown"
 
 def check_one(node, session):
-    url = WORKER_CHECK_URL + "vpn:vpn@" + f"{node['host']}:{node['port']}"
+    # 使用 Cloudflare 的公用任播 IP，绕过 DNS 解析
+cloudflare_ip = "104.16.132.229"
+host_header = "check-sstp.chengchenfeng7.workers.dev"  # 你的 Worker 域名
+url = f"https://{cloudflare_ip}/check?sstp=vpn:vpn@{node['host']}:{node['port']}"
+headers = {
+    "Host": host_header,
+    "User-Agent": "Mozilla/5.0 (gate-checker)"
+}
     out = dict(node)
     out["protocol"] = "sstp"
     out["link"] = f"sstp://vpn:vpn@{node['host']}:{node['port']}"
