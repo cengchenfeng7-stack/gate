@@ -42,7 +42,6 @@ VPNGATE_MIRROR = os.environ.get(
     "VPNGATE_MIRROR",
     "https://raw.githubusercontent.com/fdciabdul/Vpngate-Scraper-API/main/json/data.json",
 )
-WORKER_CHECK_URL = "https://check.mufengzhijia.ccwu.cc/check?sstp="
 CONCURRENCY = max(1, int(os.environ.get("CHECK_CONCURRENCY", "32")))
 CHECK_TIMEOUT = float(os.environ.get("CHECK_TIMEOUT", "90"))
 MAX_CHECK_NODES = int(os.environ.get("MAX_CHECK_NODES", "0"))
@@ -230,13 +229,14 @@ def classify_network(host, exit_org, is_datacenter=None):
 
 def check_one(node, session):
     # 使用 Cloudflare 的公用任播 IP，绕过 DNS 解析
-cloudflare_ip = "104.16.132.229"
-host_header = "check-sstp.chengchenfeng7.workers.dev"  # 你的 Worker 域名
-url = f"https://{cloudflare_ip}/check?sstp=vpn:vpn@{node['host']}:{node['port']}"
-headers = {
-    "Host": host_header,
-    r = session.get(url, timeout=CHECK_TIMEOUT, headers=headers, verify=False)
-}
+    cloudflare_ip = "104.16.132.229"
+    host_header = "check-sstp.chengchenfeng7.workers.dev"  # 你的 Worker 域名
+    url = f"https://{cloudflare_ip}/check?sstp=vpn:vpn@{node['host']}:{node['port']}"
+    headers = {
+        "Host": host_header,
+        "User-Agent": "Mozilla/5.0 (gate-checker)"
+    }
+
     out = dict(node)
     out["protocol"] = "sstp"
     out["link"] = f"sstp://vpn:vpn@{node['host']}:{node['port']}"
@@ -244,8 +244,10 @@ headers = {
     out["checked_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     out["exit"] = None
     out["residential"] = "unknown"
+
     try:
-        r = session.get(url, timeout=CHECK_TIMEOUT, headers={"User-Agent": "Mozilla/5.0 (gate-checker)"})
+        # 使用我们构建好的 IP 和 Headers 发起请求，关闭证书验证
+        r = session.get(url, timeout=CHECK_TIMEOUT, headers=headers, verify=False)
         if r.status_code != 200:
             out["error"] = f"HTTP {r.status_code}"
             out["worker_error"] = True
@@ -269,16 +271,8 @@ headers = {
     except Exception as exc:
         out["error"] = f"{type(exc).__name__}: {exc}"
         out["worker_error"] = True
-        print(f"❌ 致命错误 -> 网址: {url} | 错误: {out['error']}")  # <--- 就是加这一行
+        print(f"❌ 致命错误 -> 网址: {url} | 错误: {out['error']}")
         return out
-
-def check_all(nodes, session):
-    results = []
-    with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
-        futures = [pool.submit(check_one, n, session) for n in nodes]
-        for fut in as_completed(futures):
-            results.append(fut.result())
-    return results
 
 # ---------------------------------------------------------------------------
 # 生成数据
