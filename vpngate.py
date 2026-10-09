@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 VPN Gate SSTP 节点检测流水线 (精简版)
-=====================================
+======================================
 流程:
   1. 获取 VPN Gate 原始节点
   2. 只保留带 TCP 入口的 SSTP 节点
@@ -20,7 +20,6 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
-from urllib.parse import quote
 
 import requests
 import urllib3
@@ -50,10 +49,14 @@ HTTP_TIMEOUT = int(os.environ.get("HTTP_TIMEOUT", "60"))
 PUBLIC_DIR = os.environ.get("PUBLIC_DIR", os.path.join(REPO_DIR, "public"))
 TEMPLATE_HTML = os.path.join(REPO_DIR, "web", "index.html")
 
-# Worker URL: 从环境读取，提供默认值并保证以 / 结尾
-WORKER_CHECK_URL = os.environ.get("WORKER_CHECK_URL", "https://check-sstp.chengchenfeng7.workers.dev/")
-if not WORKER_CHECK_URL.endswith("/"):
-    WORKER_CHECK_URL += "/"
+# 关键修复：强制读取并校验 Worker URL，避免 NameError
+WORKER_CHECK_URL = os.environ.get("WORKER_CHECK_URL", "").strip()
+if not WORKER_CHECK_URL:
+    raise SystemExit(
+        "FATAL: WORKER_CHECK_URL 环境变量未设置。请在 workflow env 中设置，例如: "
+        "https://check.mufengzhijia.ccwu.cc/"
+    )
+WORKER_CHECK_URL = WORKER_CHECK_URL.rstrip("/") + "/"
 
 DATA_CENTER_ORG_KEYWORDS = [
     "GOOGLE", "AMAZON", "AWS", "MICROSOFT", "OVH", "HETZNER", "DIGITALOCEAN",
@@ -154,12 +157,13 @@ def parse_csv(text):
             if "base64" in h.lower():
                 idx["openvpn_configdata_base64"] = i
                 break
+
     pos = {
         "hostname": idx.get("hostname", 0),
         "ip": idx.get("ip", 1),
         "countrylong": idx.get("countrylong", 5),
         "countryshort": idx.get("countryshort", 6),
-        "openvpn_configdata_base64": idx.get("openvpn_configdata_base64", 0),
+        "openvpn_configdata_base64": idx.get("openvpn_configdata_base64", 14),
     }
 
     rows = []
@@ -199,7 +203,7 @@ def parse_mirror_json(data):
             "ip": ip,
             "country_long": str(s.get("countrylong") or s.get("country_long") or s.get("country") or "").strip(),
             "country_short": str(s.get("countryshort") or s.get("country_short") or "").strip(),
-            "config_b64": str(s.get("config_b64") or s.get("config") or "").strip(),
+            "config_b64": str(s.get("config_b64") or s.get("openvpn_configdata_base64") or "").strip(),
         })
     return rows
 
@@ -229,7 +233,13 @@ def to_sstp_nodes(rows):
         host = r["host"]
         if not host.endswith(".opengw.net"):
             host = f"{host}.opengw.net"
-        nodes.append({"host": host, "port": port, "ip": r["ip"], "country": r["country_long"], "country_code": r["country_short"]})
+        nodes.append({
+            "host": host,
+            "port": port,
+            "ip": r["ip"],
+            "country": r["country_long"],
+            "country_code": r["country_short"],
+        })
     return nodes
 
 def dedupe(nodes):
@@ -247,23 +257,26 @@ def dedupe(nodes):
 # 检测 Worker
 # ---------------------------------------------------------------------------
 def classify_network(host, exit_org, is_datacenter=None):
-    if is_datacenter is True: return "datacenter"
-    if is_datacenter is False: return "residential"
+    if is_datacenter is True:
+        return "datacenter"
+    if is_datacenter is False:
+        return "residential"
     org = (exit_org or "").upper()
     if org:
-        if any(k in org for k in DATA_CENTER_ORG_KEYWORDS): return "datacenter"
-        if any(k in org for k in RESIDENTIAL_ORG_KEYWORDS): return "residential"
+        if any(k in org for k in DATA_CENTER_ORG_KEYWORDS):
+            return "datacenter"
+        if any(k in org for k in RESIDENTIAL_ORG_KEYWORDS):
+            return "residential"
     h = host.lower()
-    if h.startswith("public-vpn"): return "datacenter"
-    if re.match(r"^vpn\d{5,}", h) or re.match(r"^vpnv\d+", h): return "residential"
+    if h.startswith("public-vpn"):
+        return "datacenter"
+    if re.match(r"^vpn\d{5,}", h) or re.match(r"^vpnv\d+", h):
+        return "residential"
     return "unknown"
 
 def check_one(node, session):
-    # 统一使用 WORKER_CHECK_URL（来自环境或默认），拼接参数
-    # Worker 期望像: https://.../check?vpn:vpn@host:port  或者 自定义 worker 的根路径再拼接
-    # 这里拼成: {WORKER_CHECK_URL}vpn:vpn@host:port
-    url = f"{WORKER_CHECK_URL}vpn:vpn@{node['host']}:{node['port']}"
-    
+    url = WORKER_CHECK_URL + "vpn:vpn@" + f"{node['host']}:{node['port']}"
+
     out = dict(node)
     out["protocol"] = "sstp"
     out["link"] = f"sstp://vpn:vpn@{node['host']}:{node['port']}"
@@ -273,12 +286,24 @@ def check_one(node, session):
     out["residential"] = "unknown"
 
     try:
-        r = session.get(url, timeout=CHECK_TIMEOUT, headers={"User-Agent": "Mozilla/5.0 (gate-checker)"}, verify=False)
+        r = session.get(
+            url,
+            timeout=CHECK_TIMEOUT,
+            headers={"User-Agent": "Mozilla/5.0 (gate-checker)"},
+            verify=False,
+        )
         if r.status_code != 200:
             out["error"] = f"HTTP {r.status_code}"
             out["worker_error"] = True
             return out
-        j = r.json()
+
+        try:
+            j = r.json()
+        except ValueError:
+            out["error"] = "Invalid JSON from worker"
+            out["worker_error"] = True
+            return out
+
         ok = bool(j.get("success"))
         out["success"] = ok
         out["status"] = "success" if ok else "failed"
@@ -295,8 +320,6 @@ def check_one(node, session):
                 "country_code": exit_info.get("country_code"),
                 "city": exit_info.get("city"),
                 "continent": exit_info.get("continent"),
-                "asn": asn.get("asn") if isinstance(asn, dict) else None,
-                "org": org,
             }
             out["residential"] = classify_network(out["host"], org, exit_info.get("is_datacenter"))
         else:
@@ -307,7 +330,7 @@ def check_one(node, session):
         out["worker_error"] = True
         print(f"❌ 致命错误 -> 网址: {url} | 错误: {out['error']}")
         return out
-  
+
 def check_all(nodes, session):
     results = []
     with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
@@ -323,8 +346,8 @@ def build_outputs(results, raw_count, sstp_count, source):
     available = [r for r in results if r.get("success")]
     countries = {}
     for n in available:
-        c = n.get("country") or "未知"
-        countries.setdefault(c, {"code": n.get("country_code") or "?", "nodes": []})["nodes"].append(n)
+        c = n["country"] or "未知"
+        countries.setdefault(c, {"code": n["country_code"] or "?", "nodes": []})["nodes"].append(n)
 
     stats = {
         "raw_nodes": raw_count,
@@ -333,8 +356,6 @@ def build_outputs(results, raw_count, sstp_count, source):
         "success": len(available),
         "failed": len(results) - len(available),
         "countries": len(countries),
-        "residential": sum(1 for n in available if n.get("residential") == "residential"),
-        "datacenter": sum(1 for n in available if n.get("residential") == "datacenter"),
     }
     by_country = {}
     for name, grp in countries.items():
@@ -403,9 +424,11 @@ def write_outputs(data):
         with open(TEMPLATE_HTML, "r", encoding="utf-8") as f:
             html = f.read()
     else:
-        html = ("<html><head><meta charset='utf-8'><title>VPN Gate SSTP 节点</title></head>"
-                "<body><h1>VPN Gate SSTP 节点</h1><pre id='out'></pre></body>"
-                "<script>fetch('data.json').then(r=>r.json()).then(d=>out.textContent=JSON.stringify(d.stats)).catch(e=>out.textContent='加载失败:'+e)</script></html>")
+        html = (
+            "<html><head><meta charset='utf-8'><title>VPN Gate SSTP 节点</title></head>"
+            "<body><h1>VPN Gate SSTP 节点</h1><pre id='out'></pre></body>"
+            "<script>fetch('data.json').then(r=>r.json()).then(d=>out.textContent=JSON.stringify(d.stats)).catch(e=>out.textContent='加载失败:'+e)</script></html>"
+        )
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(html)
 
