@@ -33,7 +33,7 @@ jobs:
       - name: Test Worker connection
         run: |
           echo "测试自定义域名连通性..."
-          curl -I -m 10 "https://check.mufengzhijia.ccwu.cc/" || true
+          curl -I -m 10 "https://check-sstp.chengchenfeng7.workers.dev/" || true
 
       - name: Fix DNS resolution
         run: |
@@ -44,6 +44,7 @@ jobs:
         env:
           CHECK_CONCURRENCY: "32"
           CHECK_TIMEOUT: "90"
+          WORKER_CHECK_URL: "https://check-sstp.chengchenfeng7.workers.dev/"
 
       - name: Ensure GitHub Pages is enabled (one-time auto setup)
         run: |
@@ -70,11 +71,11 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./public
+          path: ./web
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
 
       - name: Show site URL
-        run: 'echo "site: https://${{ github.repository_owner }}.github.io/gate/ ..."'
+        run: 'echo "site: https://${{ github.repository_owner }}.github.io/gate/ ..."' 
