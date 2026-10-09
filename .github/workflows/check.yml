@@ -93,6 +93,7 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
       - name: Show site URL
-        run: 'echo "site: https://${{ github.repository_owner }}.github.io/gate/"'
+  env:
+  SITE_OWNER: ${{ github.repository_owner }}
+  run: echo "site: https://${SITE_OWNER}.github.io/gate/"
