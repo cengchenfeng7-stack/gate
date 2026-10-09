@@ -228,7 +228,8 @@ def classify_network(host, exit_org, is_datacenter=None):
     return "unknown"
 WORKER_CHECK_URL = "https://check-sstp.chengchenfeng7.workers.dev/check?sstp="
 def check_one(node, session):
-      url = "https://check-sstp.cengchenfeng7.workers.dev/check?sstp=vpn:vpn@" + f"{node['host']}:{node['port']}"
+    # 直接写死完整的网址，不使用变量
+    url = "https://check-sstp.chengchenfeng7.workers.dev/check?sstp=vpn:vpn@" + f"{node['host']}:{node['port']}"
     
     out = dict(node)
     out["protocol"] = "sstp"
@@ -239,7 +240,6 @@ def check_one(node, session):
     out["residential"] = "unknown"
 
     try:
-        # 移除了 IP 和 Headers，直接使用域名请求（由 system 层的 /etc/hosts 解决 DNS）
         r = session.get(url, timeout=CHECK_TIMEOUT, headers={"User-Agent": "Mozilla/5.0 (gate-checker)"}, verify=False)
         if r.status_code != 200:
             out["error"] = f"HTTP {r.status_code}"
