@@ -235,7 +235,7 @@ host_header = "check-sstp.chengchenfeng7.workers.dev"  # 你的 Worker 域名
 url = f"https://{cloudflare_ip}/check?sstp=vpn:vpn@{node['host']}:{node['port']}"
 headers = {
     "Host": host_header,
-    "User-Agent": "Mozilla/5.0 (gate-checker)"
+    r = session.get(url, timeout=CHECK_TIMEOUT, headers=headers, verify=False)
 }
     out = dict(node)
     out["protocol"] = "sstp"
