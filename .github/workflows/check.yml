@@ -2,8 +2,8 @@ name: VPN Gate Node Check
 
 on:
   schedule:
-    - cron: "0 */2 * * *"   # 每 2 小时自动更新一次
-  workflow_dispatch:        # 支持在网页上手动点击运行
+    - cron: "0 */2 * * *"   # 每 2 小时自动抓取并更新一次
+  workflow_dispatch:        # 支持在 GitHub 网页上手动点击运行
 
 permissions:
   contents: read
@@ -36,10 +36,12 @@ jobs:
         env:
           CHECK_CONCURRENCY: "32"
           CHECK_TIMEOUT: "90"
-          # 同时传入两个变量名，确保脚本无论读取哪一个都能准确拿到检测 Worker 地址
-          CHECK_WORKER: "https://check-sstp.cengchenfeng7.workers.dev/check?sstp=vpn:vpn@"
-          WORKER_CHECK_URL: "https://check-sstp.cengchenfeng7.workers.dev/check?sstp=vpn:vpn@"
+          # 核心修正：完美对接你当前的真实检测 Worker (edgetunnel-kv)
+          CHECK_WORKER: "https://edgetunnel-kv.cengchenfeng7.workers.dev/check?sstp=vpn:vpn@"
+          WORKER_CHECK_URL: "https://edgetunnel-kv.cengchenfeng7.workers.dev/check?sstp=vpn:vpn@"
           PUBLIC_DIR: "./web"
+          # 每个国家精选保留的最快节点数 (默认 5 个，想要 8 个改这里即可)
+          MAX_PER_COUNTRY: "5"
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
